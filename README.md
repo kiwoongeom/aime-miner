@@ -156,6 +156,39 @@ You should NEVER have a stranded XMRig process consuming CPU.
 
 ---
 
+---
+
+## Managing your saved address (helper script)
+
+The simplest way to set/change your auto-loaded address is the helper script:
+
+### Linux / WSL
+```bash
+./aime-set-address.sh                  # Interactive prompt
+./aime-set-address.sh AQWWPy...        # Save directly
+./aime-set-address.sh show             # Show current saved address
+./aime-set-address.sh clear            # Remove saved address
+```
+
+### Windows
+```cmd
+aime-set-address.bat                   REM Interactive prompt
+aime-set-address.bat AQWWPy...         REM Save directly
+aime-set-address.bat show              REM Show current
+aime-set-address.bat clear             REM Remove
+```
+
+The helper validates the format (95 chars starting with 'A') and overwrites
+any previous saved address. After saving, just run `aime-mine.sh` / `aime-mine.bat`
+with no address argument.
+
+### When to use this
+- New wallet generated → save the new address
+- Switching between wallets → run set-address with new one
+- Forgot what you saved → run with 'show'
+- Want to mine to specific address one-time → use command-line arg instead (it overrides saved)
+
+
 ## Files
 
 | File | Platform | Purpose |
