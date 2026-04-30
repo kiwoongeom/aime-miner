@@ -7,6 +7,7 @@ Supports both **Linux/WSL** (with included pre-built binary) and **Windows** (XM
 
 ---
 
+> 🚀 **New here?** Start with the [Aime Getting Started Guide](https://github.com/kiwoongeom/aime-core/blob/main/GETTING_STARTED.md) — step-by-step instructions for the whole project (mining, node, wallet, all 4 components).
 ## Quick Start (Linux / macOS / WSL)
 
 ### 1. Install (first time only)
