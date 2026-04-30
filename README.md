@@ -3,7 +3,7 @@
 > Self-contained CPU miner for Aime cryptocurrency.
 > Uses XMRig — the standard RandomX miner.
 
-Supports both **Linux/WSL** (with included pre-built binary) and **Windows** (XMRig downloaded separately).
+Supports both **Linux/WSL** (with included pre-built binary) and **Windows** (XMRig downloaded separately). Address can be passed as argument, env var, or saved to a file for auto-loading.
 
 ---
 
@@ -13,17 +13,22 @@ Supports both **Linux/WSL** (with included pre-built binary) and **Windows** (XM
 ```bash
 bash install_xmrig.sh
 ```
-Builds XMRig from source. Takes ~10-20 min.
+Or just use the pre-built `xmrig-bin` (Linux x86-64, 5.3MB) already in this repo.
 
-Or just use the pre-built `xmrig-bin` already in this repo (Linux x86-64, 5.3MB).
-
-### 2. Mine
+### 2. Save your address (one-time, optional but recommended)
 ```bash
-./aime-mine.sh <YOUR_AIME_ADDRESS>
+mkdir -p ~/.aime
+echo "AQWWPyLG4exW1QNg2HZnGBgoXxkKCPf2WetZCd3n4k7nPusWGoC73nKRcUuEvCkZ1d26kNGgbuXGf7DcaJADpN484v1XjDr" > ~/.aime/last-wallet-address.txt
 ```
-Defaults: 4 threads, solo mining via local Aime node at `127.0.0.1:17081`.
 
-### 3. Stop
+### 3. Mine
+```bash
+./aime-mine.sh                  # Auto-loads address from file (default 4 threads)
+./aime-mine.sh "" 8             # Auto-load address, 8 threads
+./aime-mine.sh AQWWPy... 4      # Explicit address
+```
+
+### 4. Stop
 - **Ctrl+C** — clean stop
 - **Close terminal** — auto-stop via SIGHUP
 - **Watchdog** — kills miner if parent shell dies (10 min check)
@@ -34,62 +39,82 @@ Defaults: 4 threads, solo mining via local Aime node at `127.0.0.1:17081`.
 
 ### 1. Get xmrig.exe (one-time)
 
-Download official XMRig Windows binary:
 - Go to: https://github.com/xmrig/xmrig/releases/latest
 - Download: `xmrig-X.X.X-msvc-win64.zip`
-- Extract zip → find `xmrig.exe` inside
-- Copy `xmrig.exe` next to `aime-mine.bat` (in this folder)
+- Extract → find `xmrig.exe`
+- Copy `xmrig.exe` next to `aime-mine.bat`
 
-### 2. Mine
+### 2. Save your address (one-time, optional)
 
-Open Command Prompt or PowerShell, navigate to this folder, then:
+In CMD:
 ```cmd
-aime-mine.bat <YOUR_AIME_ADDRESS>
+mkdir "%USERPROFILE%\.aime"
+echo AQWWPyLG4exW1QNg2HZnG... > "%USERPROFILE%\.aime\last-wallet-address.txt"
 ```
 
-Example:
+### 3. Mine
 ```cmd
-aime-mine.bat AQWWPyLG4exW1QNg2HZnGBgoXxkKCPf2WetZCd3n4k7nPusWGoC73nKRcUuEvCkZ1d26kNGgbuXGf7DcaJADpN484v1XjDr 4
+aime-mine.bat                   REM Auto-loads address (default 4 threads)
+aime-mine.bat "" 8              REM Auto-load address, 8 threads
+aime-mine.bat AQWWPy... 4       REM Explicit address
 ```
 
-### 3. Stop
+### 4. Stop
 - **Ctrl+C** — XMRig stops cleanly
 - **Close window** — Windows kills the process automatically
 
-> Note: Windows version doesn't include the watchdog feature (it's not easily implemented in pure batch). However, Windows console handles Ctrl+C and window-close cleanup natively, so the miner won't survive your CMD session.
+---
+
+## Address resolution priority
+
+Both `aime-mine.sh` and `aime-mine.bat` look for the address in this order:
+
+1. **Command-line argument** — `aime-mine.sh AQWWPy... 4`
+2. **Environment variable** — `export AIME_ADDRESS=AQWWPy... && aime-mine.sh`
+3. **Saved file** — `~/.aime/last-wallet-address.txt` (Linux) or `%USERPROFILE%\.aime\last-wallet-address.txt` (Windows)
+4. **Per-folder override** — `./aime-address.txt`
+
+If nothing found → prints help.
+
+This means: once you save your address (option 3 or 4), you can run `./aime-mine.sh` with no arguments forever.
 
 ---
 
 ## Examples
 
-### Solo mining (your local Aime node)
+### Solo mining with saved address
 ```bash
-# Linux/WSL — terminal 1: run the daemon
-./aimed
+# Set up once:
+echo "AQWWPyLG..." > ~/.aime/last-wallet-address.txt
 
-# Linux/WSL — terminal 2: start mining
-./aime-mine.sh AQWWPyLG4... 4
-
-# Windows: run aimed (e.g., via WSL), then in CMD:
-aime-mine.bat AQWWPyLG4... 4
+# Mine anytime, anywhere:
+./aime-mine.sh
 ```
 
 ### Pool mining (when a pool exists)
 ```bash
-# Linux:
 ./aime-mine.sh AQWWPyLG4... 4 pool.aime.network:3333
-
-# Windows:
-aime-mine.bat AQWWPyLG4... 4 pool.aime.network:3333
 ```
 
 ### All threads
 ```bash
-# Linux:
-./aime-mine.sh AQWWPyLG4... $(nproc)
+# Linux
+./aime-mine.sh "" $(nproc)
 
-# Windows:
-aime-mine.bat AQWWPyLG4... %NUMBER_OF_PROCESSORS%
+# Windows
+aime-mine.bat "" %NUMBER_OF_PROCESSORS%
+```
+
+### Multiple wallets (per-folder override)
+```bash
+mkdir mining-rig-1 && cd mining-rig-1
+echo "AddressForRig1..." > aime-address.txt
+../aime-mine.sh   # Uses Rig1 address
+cd ..
+
+mkdir mining-rig-2 && cd mining-rig-2
+echo "AddressForRig2..." > aime-address.txt
+../aime-mine.sh   # Uses Rig2 address
 ```
 
 ---
@@ -102,21 +127,14 @@ XMRig is a terminal application. Output looks like:
  * ABOUT        XMRig/6.22.0 gcc/13.3.0
  * LIBS         libuv/1.48.0 OpenSSL/3.0.13 hwloc/2.10.0
  * HUGE PAGES   supported
- * 1GB PAGES    disabled
  * CPU          AMD Ryzen Threadripper 3960X 24-Core Processor (1)
-                64-bit AES VM
-                L2:12.0 MB L3:128.0 MB 24C/48T NUMA:1
  * MEMORY       2.6/93.7 GB (3%)
- * DONATE       1%
- * ASSEMBLY     auto:ryzen
  * POOL #1      127.0.0.1:17081 algo auto
  * COMMANDS     'h' hashrate, 'p' pause, 'r' resume, 's' results, 'c' connection
-[2026-04-28 12:34:56.789]  net      use pool 127.0.0.1:17081
-[2026-04-28 12:34:56.890]  cpu      use profile rx (4 threads)
-[2026-04-28 12:34:57.012]  randomx  init dataset algo rx/0 (4 threads)
-[2026-04-28 12:34:58.123]  randomx  dataset ready (1112 ms)
-[2026-04-28 12:34:58.234]  cpu      START hashrate threads 4 max 4
-[2026-04-28 12:35:58.345]  miner    speed 10s/60s/15m  6.2  6.1  n/a   H/s
+[12:34:56]  net      use pool 127.0.0.1:17081
+[12:34:57]  cpu      use profile rx (4 threads)
+[12:34:58]  randomx  init dataset algo rx/0 (4 threads)
+[12:35:58]  miner    speed 10s/60s/15m  6.2  6.1  n/a   H/s
 ```
 
 Live updating display. Press `h` for hashrate snapshot, `Ctrl+C` to stop.
@@ -125,33 +143,16 @@ Live updating display. Press `h` for hashrate snapshot, `Ctrl+C` to stop.
 
 ## Auto-stop behavior (Linux/WSL only)
 
-The Linux wrapper script ensures the miner doesn't survive your terminal session:
-
 | Event | Behavior |
 |---|---|
 | You press Ctrl+C | Miner stops cleanly (within 3 seconds) |
 | You close terminal X button | SIGHUP → miner stops (~1 second) |
-| You run `kill <miner PID>` | Trap catches SIGTERM → cleanup |
 | You SSH disconnect | SSH kills shell → SIGHUP → miner stops |
 | Edge case: shell dies but signal lost | Watchdog catches within 10 min, kills miner |
 
+For Windows, CMD's standard console behavior provides equivalent automatic cleanup on Ctrl+C and window close — no watchdog needed.
+
 You should NEVER have a stranded XMRig process consuming CPU.
-
-For Windows, the standard CMD console behavior provides equivalent automatic cleanup on Ctrl+C and window close — no watchdog needed.
-
----
-
-## Verify it stopped
-
-```bash
-# Linux:
-pgrep -f xmrig
-# If empty, miner is fully stopped
-
-# Windows:
-tasklist | findstr xmrig
-REM If no output, miner is fully stopped
-```
 
 ---
 
@@ -163,14 +164,11 @@ REM If no output, miner is fully stopped
 | `aime-mine.sh` | Linux/macOS/WSL | Mining wrapper with auto-stop + watchdog |
 | `aime-mine.bat` | Windows | Mining wrapper (uses xmrig.exe) |
 | `xmrig-bin` | Linux x86-64 | Pre-built XMRig binary (5.3 MB) |
-| `xmrig.exe` | Windows | (You download separately, see above) |
-| `~/.aime-miner.log` or `aime-miner.log` | Both | Mining logs |
+| `xmrig.exe` | Windows | Download separately (see above) |
 
 ---
 
 ## Mining Performance
-
-Expected hashrates with the `aime-mine.sh` defaults:
 
 | CPU | Hashrate |
 |---|---|
@@ -182,14 +180,16 @@ Expected hashrates with the `aime-mine.sh` defaults:
 To maximize hashrate:
 - **Linux**: Enable hugepages: `sudo sysctl -w vm.nr_hugepages=1280`
 - **Windows**: Run as Administrator (XMRig auto-configures hugepages)
-- Use all physical cores (not hyperthreads): `--threads=<physical_core_count>`
-- **Linux**: Set CPU governor to performance: `sudo cpupower frequency-set -g performance`
-- **Windows**: Set Power Plan to "High performance" or "Ultimate Performance"
+- Use all physical cores (not hyperthreads): match `--threads` to your physical core count
+- Set CPU power plan to "High performance"
 - Disable other CPU-heavy programs
 
 ---
 
 ## Troubleshooting
+
+### "No address found"
+Set your address one of four ways: command-line, env var, saved file, or per-folder file. See "Address resolution priority" above.
 
 ### "xmrig binary not found" / "xmrig.exe not found"
 - Linux: Run `bash install_xmrig.sh` first
@@ -198,7 +198,7 @@ To maximize hashrate:
 ### "RandomX dataset init slow"
 First mine takes ~30s to build the 256MB RandomX dataset. Subsequent runs reuse it.
 
-### "Pool unreachable" or "Connection refused"
+### "Pool unreachable" / "Connection refused"
 - Verify aimed is running: `pgrep -a aimed` (Linux) or check Task Manager (Windows)
 - Verify RPC port: `curl http://127.0.0.1:17081/get_info`
 - Check pool URL/port
@@ -206,22 +206,8 @@ First mine takes ~30s to build the 256MB RandomX dataset. Subsequent runs reuse 
 ### Hashrate way lower than expected
 - Disable CPU power saving
 - Enable hugepages
-- Check `htop` (Linux) or Task Manager (Windows) — should see threads at 100% CPU
-- **Linux**: Try MSR mod: run as root once: `sudo aime-xmrig --rdmsr`
+- **Linux**: Try MSR mod: `sudo aime-xmrig --rdmsr`
 - **Windows**: Run aime-mine.bat as Administrator
-
-### Background mining (detach from terminal)
-If you want mining to survive terminal close:
-
-**Linux**: Use `screen` or `tmux`:
-```bash
-screen -S aime-miner
-./aime-mine.sh <ADDR> 4
-# Detach with Ctrl+A, D
-# Re-attach later: screen -r aime-miner
-```
-
-**Windows**: Use Task Scheduler or run as a service (advanced). The simple `.bat` requires the window to stay open.
 
 ---
 
@@ -229,35 +215,23 @@ screen -S aime-miner
 
 To share with another miner:
 
-### Linux package
+### Linux
 ```bash
-cd /path/to/miner-package
 tar czf aime-miner-linux.tar.gz install_xmrig.sh aime-mine.sh README.md xmrig-bin
-
-# Recipient:
-tar xzf aime-miner-linux.tar.gz
-./aime-mine.sh <THEIR_ADDRESS>
 ```
 
-### Windows package
-```bat
-REM On your machine (CMD or PowerShell):
+### Windows
+```cmd
 mkdir aime-miner-windows
 copy aime-mine.bat aime-miner-windows\
 copy README.md aime-miner-windows\
-REM (User downloads xmrig.exe themselves and places it here)
-REM Compress aime-miner-windows folder to ZIP
-
-REM Recipient:
-REM 1. Extract ZIP
-REM 2. Download xmrig.exe (link in README)
-REM 3. Run: aime-mine.bat <THEIR_ADDRESS>
+REM Recipient downloads xmrig.exe themselves and places it in folder
 ```
 
-### Cross-platform package (clone GitHub repo)
+### Cross-platform (just clone)
 ```bash
 git clone https://github.com/kiwoongeom/aime-miner.git
 cd aime-miner
-# Linux: ./aime-mine.sh <ADDR>
-# Windows: aime-mine.bat <ADDR>  (after downloading xmrig.exe)
+# Linux: ./aime-mine.sh
+# Windows: aime-mine.bat (after downloading xmrig.exe)
 ```

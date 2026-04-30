@@ -2,11 +2,50 @@
 setlocal enabledelayedexpansion
 
 REM Aime CPU miner — Windows wrapper for XMRig
-REM Usage: aime-mine.bat <YOUR_AIME_ADDRESS> [THREADS] [POOL]
+REM
+REM Address resolution order:
+REM   1. Command-line argument %1
+REM   2. AIME_ADDRESS environment variable
+REM   3. %USERPROFILE%\.aime\last-wallet-address.txt
+REM   4. .\aime-address.txt (per-folder override)
+REM
+REM Usage: aime-mine.bat [AIME_ADDRESS] [THREADS] [POOL]
 
-if "%~1"=="" goto :usage
+set "ADDR="
+set "ADDR_SOURCE="
 
-set "ADDR=%~1"
+REM Try command-line first
+if not "%~1"=="" (
+    set "ADDR=%~1"
+    set "ADDR_SOURCE=command-line argument"
+    goto :address_ok
+)
+
+REM Try environment variable
+if defined AIME_ADDRESS (
+    set "ADDR=%AIME_ADDRESS%"
+    set "ADDR_SOURCE=AIME_ADDRESS env var"
+    goto :address_ok
+)
+
+REM Try saved file in user profile
+if exist "%USERPROFILE%\.aime\last-wallet-address.txt" (
+    set /p ADDR=<"%USERPROFILE%\.aime\last-wallet-address.txt"
+    set "ADDR_SOURCE=%USERPROFILE%\.aime\last-wallet-address.txt"
+    goto :address_ok
+)
+
+REM Try per-folder override
+if exist "aime-address.txt" (
+    set /p ADDR=<"aime-address.txt"
+    set "ADDR_SOURCE=.\aime-address.txt"
+    goto :address_ok
+)
+
+REM No address found
+goto :no_address
+
+:address_ok
 set "THREADS=%~2"
 set "POOL=%~3"
 
@@ -23,13 +62,6 @@ set "XMRIG="
 if exist "xmrig.exe" set "XMRIG=xmrig.exe"
 if "%XMRIG%"=="" if exist "xmrig\xmrig.exe" set "XMRIG=xmrig\xmrig.exe"
 if "%XMRIG%"=="" goto :no_xmrig
-
-REM Sanity check on address
-echo %ADDR% | findstr /B "A" >nul
-if %errorlevel% neq 0 (
-    echo [WARN] Address does not start with 'A' - is this an Aime address?
-    timeout /t 2 >nul
-)
 
 REM Generate XMRig config
 > config.json (
@@ -65,6 +97,7 @@ if "%DAEMON%"=="true" (
     echo  Mode    : POOL ^(stratum^)
 )
 echo  Address : %ADDR%
+echo  Source  : %ADDR_SOURCE%
 echo  Threads : %THREADS%
 echo  Pool    : %POOL%
 echo  XMRig   : %XMRIG%
@@ -78,34 +111,37 @@ echo.
 if exist config.json del config.json
 goto :eof
 
-:usage
+:no_address
 echo Aime CPU Miner — Windows wrapper for XMRig
 echo.
-echo Usage: aime-mine.bat ^<AIME_ADDRESS^> [THREADS] [POOL]
+echo No address found. Set one of the following:
 echo.
-echo Arguments:
-echo   AIME_ADDRESS  Your wallet address ^(95 chars, starts with "A"^)
-echo   THREADS       Number of CPU threads ^(default: 4^)
-echo   POOL          Pool URL ^(default: 127.0.0.1:17081 — solo via local node^)
+echo   1. Command line:    aime-mine.bat AQWWPyLG... 4
+echo.
+echo   2. Environment:     set AIME_ADDRESS=AQWWPyLG...
+echo                       aime-mine.bat
+echo.
+echo   3. Saved file:      mkdir "%USERPROFILE%\.aime" 2^>nul
+echo                       echo AQWWPyLG... ^> "%USERPROFILE%\.aime\last-wallet-address.txt"
+echo                       aime-mine.bat
+echo.
+echo   4. Per-folder:      echo AQWWPyLG... ^> aime-address.txt
+echo                       aime-mine.bat
 echo.
 echo Examples:
-echo   aime-mine.bat AQWWPyLG4exW1QNg2HZnGBgoXxkKCPf2WetZCd3n4k7nPusWGoC73nKRcUuEvCkZ1d26kNGgbuXGf7DcaJADpN484v1XjDr 4
-echo   aime-mine.bat AQWWPyLG4... 4 pool.aime.network:3333
+echo   aime-mine.bat AQWWPyLG4exW1QNg2HZnG... 4
+echo   aime-mine.bat "" 8                          ^(auto-load address, 8 threads^)
 echo.
 echo Prerequisites:
-echo   1. xmrig.exe in current folder ^(or xmrig\xmrig.exe^)
-echo      Download: https://github.com/xmrig/xmrig/releases
-echo      File name: xmrig-X.X.X-msvc-win64.zip
+echo   - xmrig.exe in current folder ^(or xmrig\xmrig.exe^)
+echo     Download: https://github.com/xmrig/xmrig/releases
+echo   - For SOLO mining: aimed daemon on RPC port ^(default 127.0.0.1:17081^)
 echo.
-echo   2. For SOLO mining: an Aime daemon ^(aimed^) running on the
-echo      specified RPC port ^(default 127.0.0.1:17081^).
-echo.
-echo Press Ctrl+C or close the window to stop mining.
 exit /b 1
 
 :no_xmrig
 echo ==========================================================
-echo   ERROR: xmrig.exe not found in current folder
+echo   ERROR: xmrig.exe not found
 echo ==========================================================
 echo.
 echo Download XMRig for Windows:
@@ -114,7 +150,7 @@ echo.
 echo Steps:
 echo   1. Download "xmrig-X.X.X-msvc-win64.zip"
 echo   2. Extract — find xmrig.exe inside
-echo   3. Copy xmrig.exe to this folder ^(next to aime-mine.bat^)
-echo   4. Run aime-mine.bat again
+echo   3. Copy xmrig.exe next to aime-mine.bat
+echo   4. Run again
 echo.
 exit /b 1
